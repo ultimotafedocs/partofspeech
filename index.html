@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Part of Speech Builder</title>
+<style>
+  :root {
+    --navy: #1b3a5c;
+    --navy-dark: #12293f;
+    --teal: #0e7c7b;
+    --teal-light: #e4f2f2;
+    --amber: #f2a541;
+    --amber-light: #fdf1dd;
+    --paper: #f7f9fb;
+    --ink: #24303c;
+    --correct: #2e8b57;
+    --wrong: #c0392b;
+    --card-1: #0e7c7b;
+    --card-2: #1b5c8a;
+    --card-3: #b06a1f;
+    --card-4: #6b4d9e;
+    --card-5: #9e3d5c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ---------- Banner ---------- */
+  header {
+    background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 60%, var(--teal) 130%);
+    color: #fff;
+    padding: 22px 28px 20px;
+    border-bottom: 5px solid var(--amber);
+  }
+  header h1 {
+    font-size: 1.7rem;
+    letter-spacing: 0.02em;
+  }
+  header p {
+    margin-top: 4px;
+    font-size: 1rem;
+    opacity: 0.9;
+  }
+  .banner-row {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .scoreboard {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .score-pill {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 0.95rem;
+  }
+  .score-pill strong { color: var(--amber); font-size: 1.1rem; }
+  button.reset {
+    background: var(--amber);
+    color: var(--navy-dark);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  button.reset:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.25); }
+  button.reset:focus-visible, .word:focus-visible, .zone:focus-visible {
+    outline: 3px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 22px 20px 60px;
+  }
+
+  .instructions {
+    background: var(--teal-light);
+    border-left: 6px solid var(--teal);
+    border-radius: 0 10px 10px 0;
+    padding: 12px 16px;
+    font-size: 1rem;
+    margin-bottom: 20px;
+  }
+
+  h2.section-label {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--navy);
+    margin: 14px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2.section-label::after {
+    content: "";
+    flex: 1;
+    height: 3px;
+    background: linear-gradient(90deg, var(--amber), transparent);
+    border-radius: 2px;
+  }
+
+  /* ---------- Word bank ---------- */
+  .bank {
+    background: #fff;
+    border: 2px dashed #c3ccd5;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 84px;
+    margin-bottom: 26px;
+  }
+  .bank.empty::before {
+    content: "Well done! The word bank is empty.";
+    color: #8a97a4;
+    font-style: italic;
+    align-self: center;
+  }
+
+  .word {
+    padding: 9px 16px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: bold;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    touch-action: none;
+    border: none;
+    font-family: inherit;
+  }
+  .word:hover { transform: translateY(-3px); box-shadow: 0 6px 0 rgba(0,0,0,0.22); }
+  .word.dragging { opacity: 0.45; cursor: grabbing; }
+  .word.selected {
+    outline: 3px solid var(--navy);
+    outline-offset: 2px;
+    transform: translateY(-3px) scale(1.05);
+  }
+  .word.shake { animation: shake 0.45s ease; }
+
+  .c1 { background: var(--card-1); }
+  .c2 { background: var(--card-2); }
+  .c3 { background: var(--card-3); }
+  .c4 { background: var(--card-4); }
+  .c5 { background: var(--card-5); }
+
+  /* ---------- Drop zones ---------- */
+  .zones {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+  .zone {
+    background: #fff;
+    border: 2px solid #d5dde4;
+    border-radius: 14px;
+    padding: 12px 14px 14px;
+    min-height: 120px;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+  .zone .zone-title {
+    font-weight: bold;
+    color: var(--navy);
+    font-size: 1.05rem;
+  }
+  .zone .zone-hint {
+    font-size: 0.88rem;
+    color: #6b7883;
+    margin-top: 2px;
+    margin-bottom: 10px;
+  }
+  .zone .slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 42px;
+  }
+  .zone.dragover {
+    border-color: var(--teal);
+    background: var(--teal-light);
+    transform: scale(1.015);
+  }
+  .zone.correct-flash { animation: glow 0.7s ease; }
+  .zone.wrong-flash { animation: shake 0.45s ease; border-color: var(--wrong); }
+  .zone.done {
+    border-color: var(--correct);
+    background: #f0f9f3;
+  }
+  .zone.done .zone-title::after {
+    content: " \2713";
+    color: var(--correct);
+  }
+
+  .placed {
+    padding: 7px 14px;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: bold;
+    font-size: 1rem;
+    animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+
+  /* ---------- Feedback toast ---------- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%) translateY(120%);
+    background: var(--navy);
+    color: #fff;
+    padding: 14px 22px;
+    border-radius: 12px;
+    border-left: 6px solid var(--amber);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    font-size: 1.05rem;
+    max-width: 90vw;
+    transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+    z-index: 50;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast .toast-word { color: var(--amber); font-weight: bold; }
+
+  /* ---------- Completion overlay ---------- */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(18, 41, 63, 0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .overlay.show { display: flex; }
+  .overlay-card {
+    background: #fff;
+    border-radius: 18px;
+    border-top: 8px solid var(--amber);
+    padding: 36px 40px;
+    text-align: center;
+    max-width: 460px;
+    animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .overlay-card h2 { color: var(--navy); font-size: 1.8rem; margin-bottom: 10px; }
+  .overlay-card p { font-size: 1.1rem; margin-bottom: 20px; }
+  .overlay-card .stars { font-size: 2.2rem; margin-bottom: 12px; letter-spacing: 6px; }
+
+  /* ---------- Confetti ---------- */
+  .confetti {
+    position: fixed;
+    top: -14px;
+    width: 10px;
+    height: 16px;
+    z-index: 99;
+    border-radius: 2px;
+    animation: fall linear forwards;
+  }
+
+  /* ---------- Sparkles on correct drop ---------- */
+  .spark {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 60;
+    animation: spark 0.6s ease-out forwards;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    70% { transform: scale(1.12); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-7px); }
+    40% { transform: translateX(7px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+  @keyframes glow {
+    0% { box-shadow: 0 0 0 0 rgba(46, 139, 87, 0.55); }
+    100% { box-shadow: 0 0 0 18px rgba(46, 139, 87, 0); }
+  }
+  @keyframes fall {
+    to { transform: translateY(105vh) rotate(660deg); }
+  }
+  @keyframes spark {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+  @media (max-width: 480px) {
+    header h1 { font-size: 1.35rem; }
+    .zones { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="banner-row">
+    <div>
+      <h1>Part of Speech Builder</h1>
+      <p>Drag each word to the correct box. Good luck!</p>
+    </div>
+    <div class="scoreboard">
+      <span class="score-pill">Correct: <strong id="score">0</strong> / <span id="total">0</span></span>
+      <button class="reset" id="resetBtn" type="button">Start again</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="instructions">
+    <strong>How to play:</strong> Drag a word from the word bank and drop it in the correct box below.
+    On a tablet or phone, you can also <strong>tap a word</strong>, then <strong>tap a box</strong>.
+  </div>
+
+  <h2 class="section-label">Word bank</h2>
+  <div class="bank" id="bank" aria-label="Word bank"></div>
+
+  <h2 class="section-label">Drop zones</h2>
+  <div class="zones" id="zones"></div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-card">
+    <div class="stars">&#11088;&#11088;&#11088;</div>
+    <h2>Fantastic work!</h2>
+    <p id="finalMsg">You sorted every word correctly.</p>
+    <button class="reset" id="playAgainBtn" type="button">Play again</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Data ----------
+  var ZONES = [
+    { id: "past",  title: "Simple past verb",        hint: "Something that happened before now" },
+    { id: "pres",  title: "Simple present verb",     hint: "A habit or routine (he / she / it + s)" },
+    { id: "cont",  title: "Present continuous",      hint: "be + verb + ing (happening now)" },
+    { id: "fut",   title: "Simple future",           hint: "will + verb (a plan or prediction)" },
+    { id: "adj",   title: "Adjective",               hint: "Describes a person, place or thing" },
+    { id: "adv",   title: "Adverb",                  hint: "Tells us how something happens" },
+    { id: "prep",  title: "Preposition",             hint: "Shows where something is" },
+    { id: "modal", title: "Modal verb",              hint: "can, must, should + verb" },
+    { id: "conj",  title: "Conjunction",             hint: "Joins two sentences: and, but, so" }
+  ];
+
+  var WORDS = [
+    { w: "went",        z: "past",  s: "Yesterday I went to Parramatta." },
+    { w: "ate",         z: "past",  s: "She ate lunch at the food court." },
+    { w: "worked",      z: "past",  s: "He worked last Saturday." },
+    { w: "lives",       z: "pres",  s: "My sister lives in Bankstown." },
+    { w: "eats",        z: "pres",  s: "He eats breakfast at 7 o'clock every day." },
+    { w: "catches",     z: "pres",  s: "She catches the bus to TAFE every morning." },
+    { w: "is cooking",  z: "cont",  s: "Mum is cooking dinner right now." },
+    { w: "are waiting", z: "cont",  s: "We are waiting for the train at Central Station." },
+    { w: "am reading",  z: "cont",  s: "I am reading my English book at the moment." },
+    { w: "will visit",  z: "fut",   s: "We will visit the Opera House on Sunday." },
+    { w: "will call",   z: "fut",   s: "I will call the doctor tomorrow." },
+    { w: "will study",  z: "fut",   s: "They will study at the library tonight." },
+    { w: "cheap",       z: "adj",   s: "The vegetables at the market are cheap." },
+    { w: "busy",        z: "adj",   s: "George Street is very busy today." },
+    { w: "friendly",    z: "adj",   s: "My neighbours are friendly." },
+    { w: "slowly",      z: "adv",   s: "Please speak slowly." },
+    { w: "carefully",   z: "adv",   s: "She drives carefully in the rain." },
+    { w: "quickly",     z: "adv",   s: "The bus came quickly this morning." },
+    { w: "near",        z: "prep",  s: "I live near the station." },
+    { w: "under",       z: "prep",  s: "The keys are under the newspaper." },
+    { w: "between",     z: "prep",  s: "The chemist is between the bank and the cafe." },
+    { w: "can",         z: "modal", s: "I can speak two languages." },
+    { w: "must",        z: "modal", s: "You must tap on with your Opal card." },
+    { w: "should",      z: "modal", s: "You should see a doctor about that cough." },
+    { w: "and",         z: "conj",  s: "I bought bread, and I bought milk too." },
+    { w: "but",         z: "conj",  s: "It was sunny, but it was cold." },
+    { w: "so",          z: "conj",  s: "I was tired, so I went to bed early." }
+  ];
+
+  var COLOURS = ["c1", "c2", "c3", "c4", "c5"];
+
+  // ---------- State ----------
+  var bankEl = document.getElementById("bank");
+  var zonesEl = document.getElementById("zones");
+  var scoreEl = document.getElementById("score");
+  var totalEl = document.getElementById("total");
+  var toastEl = document.getElementById("toast");
+  var overlayEl = document.getElementById("overlay");
+  var finalMsgEl = document.getElementById("finalMsg");
+
+  var score = 0;
+  var wrongTries = 0;
+  var selectedWord = null;   // tap-to-place selection
+  var draggedWord = null;    // HTML5 drag
+  var toastTimer = null;
+
+  totalEl.textContent = WORDS.length;
+
+  // ---------- Build zones ----------
+  ZONES.forEach(function (z) {
+    var el = document.createElement("div");
+    el.className = "zone";
+    el.dataset.zone = z.id;
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("role", "group");
+    el.setAttribute("aria-label", z.title);
+    el.innerHTML =
+      '<div class="zone-title">' + z.title + "</div>" +
+      '<div class="zone-hint">' + z.hint + "</div>" +
+      '<div class="slots"></div>';
+    zonesEl.appendChild(el);
+
+    el.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      el.classList.add("dragover");
+    });
+    el.addEventListener("dragleave", function () {
+      el.classList.remove("dragover");
+    });
+    el.addEventListener("drop", function (e) {
+      e.preventDefault();
+      el.classList.remove("dragover");
+      if (draggedWord) tryPlace(draggedWord, el);
+    });
+
+    // Tap-to-place and keyboard support
+    function zoneActivate() {
+      if (selectedWord) {
+        tryPlace(selectedWord, el);
+        clearSelection();
+      }
+    }
+    el.addEventListener("click", zoneActivate);
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        zoneActivate();
+      }
+    });
+  });
+
+  // ---------- Build word bank ----------
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function buildBank() {
+    bankEl.innerHTML = "";
+    shuffle(WORDS).forEach(function (item, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "word " + COLOURS[i % COLOURS.length];
+      b.textContent = item.w;
+      b.dataset.zone = item.z;
+      b.dataset.sentence = item.s;
+      b.setAttribute("draggable", "true");
+      b.setAttribute("aria-label", "Word: " + item.w + ". Select it, then choose a box.");
+
+      b.addEventListener("dragstart", function (e) {
+        draggedWord = b;
+        b.classList.add("dragging");
+        clearSelection();
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", item.w);
+        }
+      });
+      b.addEventListener("dragend", function () {
+        b.classList.remove("dragging");
+        draggedWord = null;
+      });
+
+      // Tap / keyboard select
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (selectedWord === b) {
+          clearSelection();
+        } else {
+          clearSelection();
+          selectedWord = b;
+          b.classList.add("selected");
+        }
+      });
+
+      bankEl.appendChild(b);
+    });
+    bankEl.classList.remove("empty");
+  }
+
+  function clearSelection() {
+    if (selectedWord) selectedWord.classList.remove("selected");
+    selectedWord = null;
+  }
+
+  // ---------- Game logic ----------
+  function tryPlace(wordEl, zoneEl) {
+    if (!wordEl || !wordEl.parentNode || wordEl.parentNode !== bankEl) return;
+
+    if (wordEl.dataset.zone === zoneEl.dataset.zone) {
+      placeCorrect(wordEl, zoneEl);
+    } else {
+      wrongTries++;
+      zoneEl.classList.remove("wrong-flash");
+      void zoneEl.offsetWidth; // restart animation
+      zoneEl.classList.add("wrong-flash");
+      wordEl.classList.remove("shake");
+      void wordEl.offsetWidth;
+      wordEl.classList.add("shake");
+      showToast("Not quite. Try another box for <span class='toast-word'>" +
+        wordEl.textContent + "</span>.");
+      setTimeout(function () {
+        zoneEl.classList.remove("wrong-flash");
+        wordEl.classList.remove("shake");
+      }, 500);
+    }
+  }
+
+  function placeCorrect(wordEl, zoneEl) {
+    var chip = document.createElement("span");
+    chip.className = "placed " + getColourClass(wordEl);
+    chip.textContent = wordEl.textContent;
+    zoneEl.querySelector(".slots").appendChild(chip);
+    zoneEl.classList.remove("correct-flash");
+    void zoneEl.offsetWidth;
+    zoneEl.classList.add("correct-flash");
+
+    sparkle(chip);
+
+    var sentence = wordEl.dataset.sentence;
+    wordEl.remove();
+    clearSelection();
+
+    score++;
+    scoreEl.textContent = score;
+
+    showToast("&#10003; Great! <span class='toast-word'>" + chip.textContent +
+      "</span> &nbsp;" + sentence);
+
+    markZoneIfDone(zoneEl);
+
+    if (bankEl.children.length === 0) {
+      bankEl.classList.add("empty");
+      setTimeout(finishGame, 700);
+    }
+  }
+
+  function getColourClass(el) {
+    for (var i = 0; i < COLOURS.length; i++) {
+      if (el.classList.contains(COLOURS[i])) return COLOURS[i];
+    }
+    return "c1";
+  }
+
+  function markZoneIfDone(zoneEl) {
+    var zoneId = zoneEl.dataset.zone;
+    var needed = WORDS.filter(function (w) { return w.z === zoneId; }).length;
+    var have = zoneEl.querySelectorAll(".placed").length;
+    if (have >= needed) zoneEl.classList.add("done");
+  }
+
+  function finishGame() {
+    var msg = "You sorted all " + WORDS.length + " words correctly";
+    msg += wrongTries === 0 ? " with no mistakes. Amazing!" :
+      ". You had " + wrongTries + (wrongTries === 1 ? " try" : " tries") +
+      " that did not work, and you kept going. Well done!";
+    finalMsgEl.textContent = msg;
+    overlayEl.classList.add("show");
+    confetti();
+  }
+
+  // ---------- Effects ----------
+  function showToast(html) {
+    toastEl.innerHTML = html;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toastEl.classList.remove("show");
+    }, 3200);
+  }
+
+  function sparkle(target) {
+    var rect = target.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    var palette = ["#f2a541", "#0e7c7b", "#1b5c8a", "#9e3d5c"];
+    for (var i = 0; i < 8; i++) {
+      var s = document.createElement("div");
+      s.className = "spark";
+      s.style.background = palette[i % palette.length];
+      s.style.left = cx + "px";
+      s.style.top = cy + "px";
+      var angle = (Math.PI * 2 * i) / 8;
+      s.style.setProperty("--dx", Math.cos(angle) * 46 + "px");
+      s.style.setProperty("--dy", Math.sin(angle) * 46 + "px");
+      document.body.appendChild(s);
+      s.addEventListener("animationend", function () { this.remove(); });
+    }
+  }
+
+  function confetti() {
+    var palette = ["#f2a541", "#0e7c7b", "#1b5c8a", "#9e3d5c", "#6b4d9e"];
+    for (var i = 0; i < 90; i++) {
+      var c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.background = palette[i % palette.length];
+      c.style.animationDuration = 2.2 + Math.random() * 2 + "s";
+      c.style.animationDelay = Math.random() * 0.9 + "s";
+      c.style.transform = "rotate(" + Math.random() * 360 + "deg)";
+      document.body.appendChild(c);
+      c.addEventListener("animationend", function () { this.remove(); });
+    }
+  }
+
+  // ---------- Reset ----------
+  function resetGame() {
+    score = 0;
+    wrongTries = 0;
+    scoreEl.textContent = "0";
+    overlayEl.classList.remove("show");
+    toastEl.classList.remove("show");
+    clearSelection();
+    document.querySelectorAll(".zone").forEach(function (z) {
+      z.classList.remove("done", "correct-flash", "wrong-flash");
+      z.querySelector(".slots").innerHTML = "";
+    });
+    buildBank();
+  }
+
+  document.getElementById("resetBtn").addEventListener("click", resetGame);
+  document.getElementById("playAgainBtn").addEventListener("click", resetGame);
+
+  // Deselect when tapping empty space
+  document.body.addEventListener("click", function (e) {
+    if (!e.target.closest(".word") && !e.target.closest(".zone")) clearSelection();
+  });
+
+  buildBank();
+})();
+</script>
+</body>
+</html>
